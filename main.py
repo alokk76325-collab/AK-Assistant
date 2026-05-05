@@ -2,31 +2,45 @@ import streamlit as st
 import google.generativeai as genai
 
 # API Key configure karein
-API_KEY = "AIzaSyD7-Z5X-cPGtODt5drBDAdllybhnEP3AiI"
+# (Apni original key use karna jo tumhare paas hai)
+API_KEY = "AIzaSyD7-Z5X-cPGtODt5drBDAdllybhnEP3AiI" 
 genai.configure(api_key=API_KEY)
 
-# --- AUTO MODEL SELECTOR ---
+# --- AUTO MODEL SELECTOR (FIXED PREFIX ISSUE) ---
 def select_best_model():
     try:
-        # Ye line Google se saare available models ki list mangwayegi
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        # Google se saare models ki full list mangwayein (ye 'models/' prefix ke saath hoti hai)
+        raw_available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         
-        # Hum sabse naya (Flash 1.5) dhundhne ki koshish karenge, warna jo pehla milega wo le lenge
-        for name in available_models:
-            if 'gemini-1.5-flash' in name:
+        # Hum prefix hata kar sirf 'gemini-1.5-flash' ya 'gemini-1.5-pro' dundhein ge
+        clean_model_names = [name.split('/')[-1] for name in raw_available_models]
+
+        # Hum sabse pehle 'gemini-1.5-flash' dhundhenge (sabse fast aur free)
+        for name in clean_model_names:
+            if 'gemini-1.5-flash' == name:
                 return name
-        return available_models[0] # Agar flash nahi mila toh list ka pehla model
+        
+        # Agar flash nahi mila toh 'gemini-1.5-pro' try karenge
+        for name in clean_model_names:
+            if 'gemini-1.5-pro' == name:
+                return name
+        
+        # Agar koi specific model nahi mila toh list ka pehla clean name use karenge
+        return clean_model_names[0]
     except Exception:
-        return "gemini-1.5-flash" # Backup agar list na mil paye
+        # Backup: directly provide the most likely working model name
+        return "gemini-1.5-flash"
 
 # Model select karna
 if "model_name" not in st.session_state:
     st.session_state.model_name = select_best_model()
 
+# Final model initialization
 model = genai.GenerativeModel(st.session_state.model_name)
 
 # --- Streamlit UI ---
 st.title("🤖 AK Assistant")
+# Updated title to show actual active model name
 st.caption(f"Active Model: {st.session_state.model_name}")
 
 if "messages" not in st.session_state:
@@ -50,5 +64,6 @@ if prompt := st.chat_input("Bol Alok, kya haal hai?"):
             st.markdown(response.text)
             st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
-            st.error(f"Locha ho gaya: {e}")
+            # Better error message
+            st.error(f"Dost, model '{st.session_state.model_name}' connect nahi ho pa raha: {e}")
             

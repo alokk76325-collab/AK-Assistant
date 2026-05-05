@@ -1,9 +1,13 @@
 import streamlit as st
 import google.generativeai as genai
+import os
 
-# Is baar model name ekdum safe 'gemini-1.5-flash' hi rakhte hain
-genai.configure(api_key="AIzaSyD7-Z5X-cPGtODt5drBDAdllybhnEP3AiI") 
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+api_key = "AIzaSyD7-Z5X-cPGtODt5drBDAdllybhnEP3AiI"
+
+genai.configure(api_key=api_key)
+
+# Model name fix: 'gemini-1.5-flash'
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.set_page_config(page_title="AK Assistant", page_icon="🤖")
 st.title("🤖 AK Assistant")
@@ -23,11 +27,16 @@ if prompt := st.chat_input("Bol Alok, kya kaam hai?"):
 
     with st.chat_message("assistant"):
         try:
-            # Desi Hindi prompt
-            response = model.generate_content(f"Tumhara naam AK hai. Alok Kumar ke best friend ho. Desi Hindi mein iska jawab do: {prompt}")
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
+            full_prompt = f"Tumhara naam AK hai. Alok Kumar ke best friend ho. Desi Hindi mein iska jawab do: {prompt}"
+            response = model.generate_content(full_prompt)
+            
+            if response.text:
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+            else:
+                st.error("Model ne koi jawab nahi diya. Safety filters check karein.")
+                
         except Exception as e:
-            # Agar koi aur model name chahiye ho toh ye backup try karega
-            st.error("Model connect nahi ho pa raha. Ek baar refresh karein.")
+            # Isse tumhe screen par asli error dikhega ki dikkat kahan hai
+            st.error(f"Dost, kuch locha ho gaya: {e}")
             

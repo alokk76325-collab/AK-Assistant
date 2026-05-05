@@ -1,64 +1,32 @@
+import streamlit as st
 import google.generativeai as genai
-import webbrowser
-import os
 
-# --- API Setup ---
-API_KEY = "AIzaSyD7-Z5X-cPGtODt5drBDAdllybhnEP3AiI"
-genai.configure(api_key=API_KEY)
+# Gemini Setup
+genai.configure(api_key="AIzaSyD7-Z5X-cPGtODt5drBDAdllybhnEP3AiI") # Apni key check kar lena
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Dynamic Model Finder
-try:
-    available_models = [m for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    active_model_name = available_models[0].name
-except:
-    active_model_name = "models/gemini-1.5-flash"
+st.set_page_config(page_title="AK Assistant", page_icon="🤖")
+st.title("🤖 AK Assistant")
+st.caption("Alok Kumar's Personal AI")
 
-model = genai.GenerativeModel(
-    model_name=active_model_name,
-    system_instruction="Tumhara naam AK hai. Tum Alok ke personal assistant ho. Desi hindi mein baat karo."
-)
-chat = model.start_chat(history=[])
+# Chat History setup
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-print(f"--- AK Ultimate System Active ---")
-print("AK: Bol bhai Alok! Ab gaana ho ya location, tera bhai direct action lega.\n")
+# Purani baatein dikhane ke liye
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-while True:
-    query = input("Aap: ").lower()
-    if query in ['exit', 'bye', 'so jao']: break
+# User se input lene ke liye (Asli Fix yahan hai)
+if prompt := st.chat_input("Bol Alok, kya kaam hai?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-    # --- 1. SMART YOUTUBE SEARCH (Sabse Pehle) ---
-    if "youtube" in query or "play" in query or "gaana" in query or "song" in query:
-        # Faltu words hatana taaki sirf gaane ka naam bache
-        song = query.replace("youtube", "").replace("pr", "").replace("par", "").replace("chalao", "").replace("lagao", "").replace("play", "").replace("song", "").replace("gaana", "").strip()
-        if song:
-            print(f"AK: Theek hai bhai, YouTube par '{song}' dhundh raha hoon...")
-            webbrowser.open(f"https://www.youtube.com/results?search_query={song}")
-        else:
-            print("AK: Kaunsa gaana bhai? Naam toh batao!")
-            webbrowser.open("https://www.youtube.com")
-        continue
-
-    # --- 2. LIVE LOCATION & WEATHER ---
-    if "location" in query or "kahan hoon" in query:
-        print("AK: Maps khul raha hai, apni location dekh lo!")
-        webbrowser.open("http://maps.google.com/maps?q=my+current+location")
-        continue
-
-    if "weather" in query or "mausam" in query:
-        city = query.replace("weather", "").replace("mausam", "").replace("ka", "").strip()
-        print(f"AK: Mausam ka haal hazir hai...")
-        webbrowser.open(f"https://www.google.com/search?q=weather+{city if city else 'current+location'}")
-        continue
-
-    # --- 3. CALLS ---
-    if "call" in query:
-        person = query.replace("call", "").strip()
-        webbrowser.open(f"tel:{person}") if person.isdigit() else print(f"AK: {person} ka number dalo:")
-        continue
-
-    # --- AI CHAT (Agar upar ka kuch match na ho) ---
-    try:
-        response = chat.send_message(query)
-        print(f"AK: {response.text}")
-    except Exception as e:
-        print(f"AK: Error: {e}")
+    # AI ka response
+    with st.chat_message("assistant"):
+        response = model.generate_content(f"Tumhara naam AK hai. Alok Kumar ke best friend ho. Desi Hindi mein iska jawab do: {prompt}")
+        st.markdown(response.text)
+        st.session_state.messages.append({"role": "assistant", "content": response.text})
+        
